@@ -1,35 +1,22 @@
-# ===============================
-# Build Stage
-# ===============================
-FROM eclipse-temurin:25-jdk AS build
+FROM maven:3.9.16-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copy Maven wrapper
-COPY mvnw .
-COPY .mvn/ .mvn/
 COPY pom.xml .
 
-# Fix Windows CRLF -> Linux LF
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+RUN mvn dependency:go-offline -B
 
-# Copy source
 COPY src ./src
 
-# Build
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests -B
 
 
-# ===============================
-# Runtime Stage
-# ===============================
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
-# Render provides PORT
 EXPOSE 10000
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
