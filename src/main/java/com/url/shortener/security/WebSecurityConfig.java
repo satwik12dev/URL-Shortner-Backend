@@ -105,12 +105,19 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Actuator health - public for Render health checks
+                        .requestMatchers("/actuator/health").permitAll()
+
                         // Public authentication APIs
                         .requestMatchers("/api/auth/**").permitAll()
+
                         // Protected URL APIs
                         .requestMatchers("/api/urls/**").authenticated()
+
                         // Short URL redirect
                         .requestMatchers("/{shortUrl}").permitAll()
+
                         // Everything else
                         .anyRequest().authenticated()
                 );
