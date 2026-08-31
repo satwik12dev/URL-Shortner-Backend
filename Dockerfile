@@ -1,23 +1,19 @@
-# ===============================
-# Build Stage
-# ===============================
-FROM maven:3.9.16-eclipse-temurin-25 AS build
+FROM eclipse-temurin:24-jdk AS build
 
 WORKDIR /app
 
+COPY mvnw .
+COPY .mvn/ .mvn/
 COPY pom.xml .
 
-RUN mvn dependency:go-offline -B
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
 
 COPY src ./src
 
-RUN mvn clean package -DskipTests -B
+RUN ./mvnw clean package -DskipTests
 
 
-# ===============================
-# Runtime Stage
-# ===============================
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:24-jre
 
 WORKDIR /app
 
