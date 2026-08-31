@@ -2,7 +2,6 @@ package com.url.shortener.security;
 
 import com.url.shortener.security.jwt.JwtAuthenticationFilter;
 import com.url.shortener.service.UserDetailsServiceImpl;
-import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -27,30 +25,47 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@AllArgsConstructor
 public class WebSecurityConfig {
 
-    private UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter();
+    // ===============================
+    // Constructor Injection
+    // ===============================
+    public WebSecurityConfig(
+            UserDetailsServiceImpl userDetailsService,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
+        this.userDetailsService = userDetailsService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    // ===============================
+    // Password Encoder
+    // ===============================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // ===============================
+    // Authentication Manager
+    // ===============================
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authenticationConfiguration
     ) throws Exception {
+
         return authenticationConfiguration.getAuthenticationManager();
     }
 
+    // ===============================
+    // Authentication Provider
+    // ===============================
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
+
         DaoAuthenticationProvider authProvider =
                 new DaoAuthenticationProvider();
 
@@ -66,7 +81,8 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173"
@@ -88,44 +104,74 @@ public class WebSecurityConfig {
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
 
         return source;
     }
 
     // ===============================
-    // Security Configuration
+    // Security Filter Chain
     // ===============================
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                // Enable CORS
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        // CORS preflight
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+    public SecurityFilterChain filterChain(
+            HttpSecurity http
+    ) throws Exception {
 
-                        // Actuator health - public for Render health checks
-                        .requestMatchers("/actuator/health").permitAll()
+        http
+                // Disable CSRF
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // Enable CORS
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
+                )
+
+                // Authorization
+                .authorizeHttpRequests(auth -> auth
+
+                        // CORS preflight
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
+
+                        // Health API
+                        .requestMatchers(
+                                "/actuator/health"
+                        ).permitAll()
 
                         // Public authentication APIs
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**"
+                        ).permitAll()
 
                         // Protected URL APIs
-                        .requestMatchers("/api/urls/**").authenticated()
+                        .requestMatchers(
+                                "/api/urls/**"
+                        ).authenticated()
 
                         // Short URL redirect
-                        .requestMatchers("/{shortUrl}").permitAll()
+                        .requestMatchers(
+                                "/{shortUrl}"
+                        ).permitAll()
 
                         // Everything else
                         .anyRequest().authenticated()
                 );
 
-        http.authenticationProvider(authenticationProvider());
+        // Authentication provider
+        http.authenticationProvider(
+                authenticationProvider()
+        );
 
+        // JWT filter
         http.addFilterBefore(
-                jwtAuthenticationFilter(),
+                jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class
         );
 
