@@ -85,7 +85,8 @@ public class WebSecurityConfig {
                 new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173"
+                "http://localhost:5173",
+                "https://url-shortner-frontend-murex.vercel.app"
         ));
 
         configuration.setAllowedMethods(List.of(
