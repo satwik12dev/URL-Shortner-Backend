@@ -86,7 +86,8 @@ public class WebSecurityConfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://url-shortner-frontend-murex.vercel.app"
+                "https://url-shortner-frontend-murex.vercel.app",
+                "https://spring-boot-url-shortner.vercel.app"
         ));
 
         configuration.setAllowedMethods(List.of(
