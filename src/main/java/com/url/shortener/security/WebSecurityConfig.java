@@ -2,6 +2,7 @@ package com.url.shortener.security;
 
 import com.url.shortener.security.jwt.JwtAuthenticationFilter;
 import com.url.shortener.service.UserDetailsServiceImpl;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,47 +27,30 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@AllArgsConstructor
 public class WebSecurityConfig {
 
-    private final UserDetailsServiceImpl userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private UserDetailsServiceImpl userDetailsService;
 
-    // ===============================
-    // Constructor Injection
-    // ===============================
-    public WebSecurityConfig(
-            UserDetailsServiceImpl userDetailsService,
-            JwtAuthenticationFilter jwtAuthenticationFilter
-    ) {
-        this.userDetailsService = userDetailsService;
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
     }
 
-    // ===============================
-    // Password Encoder
-    // ===============================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ===============================
-    // Authentication Manager
-    // ===============================
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authenticationConfiguration
     ) throws Exception {
-
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    // ===============================
-    // Authentication Provider
-    // ===============================
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-
         DaoAuthenticationProvider authProvider =
                 new DaoAuthenticationProvider();
 
@@ -81,13 +66,11 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://url-shortner-frontend-murex.vercel.app",
-                "https://spring-boot-url-shortner.vercel.app"
+                "https://url-shortner-backend-8zpg.onrender.com"
         ));
 
         configuration.setAllowedMethods(List.of(
@@ -106,74 +89,39 @@ public class WebSecurityConfig {
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
 
     // ===============================
-    // Security Filter Chain
+    // Security Configuration
     // ===============================
     @Bean
-    public SecurityFilterChain filterChain(
-            HttpSecurity http
-    ) throws Exception {
-
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF
                 .csrf(AbstractHttpConfigurer::disable)
-
                 // Enable CORS
-                .cors(cors ->
-                        cors.configurationSource(
-                                corsConfigurationSource()
-                        )
-                )
-
-                // Authorization
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-
                         // CORS preflight
-                        .requestMatchers(
-                                HttpMethod.OPTIONS,
-                                "/**"
-                        ).permitAll()
-
-                        // Health API
-                        .requestMatchers(
-                                "/actuator/health"
-                        ).permitAll()
-
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Health check endpoints
+                        .requestMatchers("/health", "/api/health").permitAll()
                         // Public authentication APIs
-                        .requestMatchers(
-                                "/api/auth/**"
-                        ).permitAll()
-
+                        .requestMatchers("/api/auth/**").permitAll()
                         // Protected URL APIs
-                        .requestMatchers(
-                                "/api/urls/**"
-                        ).authenticated()
-
+                        .requestMatchers("/api/urls/**").authenticated()
                         // Short URL redirect
-                        .requestMatchers(
-                                "/{shortUrl}"
-                        ).permitAll()
-
+                        .requestMatchers("/{shortUrl}").permitAll()
                         // Everything else
                         .anyRequest().authenticated()
                 );
 
-        // Authentication provider
-        http.authenticationProvider(
-                authenticationProvider()
-        );
+        http.authenticationProvider(authenticationProvider());
 
-        // JWT filter
         http.addFilterBefore(
-                jwtAuthenticationFilter,
+                jwtAuthenticationFilter(),
                 UsernamePasswordAuthenticationFilter.class
         );
 

@@ -1,24 +1,42 @@
-FROM eclipse-temurin:24-jdk AS build
+# ===============================
+# Build Stage
+# ===============================
+FROM eclipse-temurin:21-jdk AS build
 
 WORKDIR /app
 
-COPY mvnw .
-COPY .mvn/ .mvn/
-COPY pom.xml .
+# Copy Maven wrapper
+COPY mvnw ./
+COPY .mvn/ ./
 
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+# Make Maven wrapper executable
+RUN chmod +x mvnw
 
+# Copy pom.xml
+COPY pom.xml ./
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline
+
+# Copy source code
 COPY src ./src
 
+# Build Spring Boot application
 RUN ./mvnw clean package -DskipTests
 
 
-FROM eclipse-temurin:24-jre
+# ===============================
+# Runtime Stage
+# ===============================
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
+# Copy generated JAR
 COPY --from=build /app/target/*.jar app.jar
 
+# Render default web service port
 EXPOSE 10000
 
+# Start application
 ENTRYPOINT ["java", "-jar", "app.jar"]
