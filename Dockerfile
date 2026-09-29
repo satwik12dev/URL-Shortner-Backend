@@ -3,12 +3,8 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
 COPY mvnw ./
-COPY .mvn/ ./
+COPY .mvn /app/.mvn
 COPY pom.xml ./
-
-RUN ls -la /app
-RUN ls -la /app/.mvn
-RUN ls -la /app/.mvn/wrapper
 
 RUN chmod +x mvnw
 
